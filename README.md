@@ -11,6 +11,10 @@
 [![Python](https://img.shields.io/badge/Backend-Python_3.11_FastAPI-3776AB.svg?logo=python&logoColor=white)](server/)
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF.svg?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
 
+<br/>
+
+[![Download APK](https://img.shields.io/badge/Download_APK-v1.0.0_Release-brightgreen?style=for-the-badge&logo=android)](https://github.com/amotixayush-dev/AmozVz/releases/latest)
+
 </div>
 
 ---
