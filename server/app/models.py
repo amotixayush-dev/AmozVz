@@ -8,15 +8,16 @@ from pydantic import BaseModel, Field
 
 
 class DictationMode(str, Enum):
-    FLOW_NATURAL = "flow_natural"
-    PROFESSIONAL = "professional"
-    BULLET_POINTS = "bullet_points"
-    RAW_VERBATIM = "raw_verbatim"
+    AUTO = "auto"
+    EMAIL = "email"
+    CHAT = "chat"
+    CODE = "code"
+    LISTS = "lists"
 
 
 class CleanRequest(BaseModel):
     raw_text: str = Field(..., description="Raw transcribed text containing speech hesitations, false starts, etc.")
-    mode: DictationMode = Field(default=DictationMode.FLOW_NATURAL, description="Dictation polishing mode")
+    mode: DictationMode = Field(default=DictationMode.AUTO, description="Dictation polishing mode")
     strip_hesitations: bool = Field(default=True, description="Whether to filter filler words (um, uh, like)")
     resolve_corrections: bool = Field(default=True, description="Whether to resolve self-corrections/changes")
     custom_dictionary: Optional[Dict[str, str]] = Field(default=None, description="Custom word/phrase replacements")

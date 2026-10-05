@@ -48,24 +48,29 @@ def get_modes():
     return {
         "modes": [
             {
-                "id": DictationMode.FLOW_NATURAL.value,
-                "name": "Natural Flow",
-                "description": "Standard conversational dictation with hesitations removed and smart punctuation.",
+                "id": DictationMode.AUTO.value,
+                "name": "Auto Detect",
+                "description": "Automatically structures output, detects lists, paragraphs, and tone.",
             },
             {
-                "id": DictationMode.PROFESSIONAL.value,
-                "name": "Professional",
-                "description": "Concise, formal phrasing ideal for business emails, reports, and Slack.",
+                "id": DictationMode.EMAIL.value,
+                "name": "Email",
+                "description": "Professional formatting with proper greeting, paragraphs, and closing.",
             },
             {
-                "id": DictationMode.BULLET_POINTS.value,
-                "name": "Bullet Points",
-                "description": "Transforms spoken ideas, steps, and lists into structured Markdown bullets.",
+                "id": DictationMode.CHAT.value,
+                "name": "Casual Chat",
+                "description": "Concise and natural phrasing for messaging and quick communication.",
             },
             {
-                "id": DictationMode.RAW_VERBATIM.value,
-                "name": "Raw Verbatim",
-                "description": "Preserves every exact word including filler sounds, with basic punctuation.",
+                "id": DictationMode.CODE.value,
+                "name": "Code",
+                "description": "Formats programming syntax and code references into clean code blocks.",
+            },
+            {
+                "id": DictationMode.LISTS.value,
+                "name": "Lists",
+                "description": "Auto-structures items into clean bullet points or numbered lists.",
             },
         ]
     }
@@ -93,7 +98,7 @@ def clean_text(request: CleanRequest):
 @app.post("/v1/dictate", response_model=CleanResponse)
 async def dictate_audio(
     file: UploadFile = File(..., description="Audio file (WAV, MP3, M4A, OGG)"),
-    mode: DictationMode = Form(default=DictationMode.FLOW_NATURAL),
+    mode: DictationMode = Form(default=DictationMode.AUTO),
     strip_hesitations: bool = Form(default=True),
     resolve_corrections: bool = Form(default=True),
     language: str = Form(default="en"),

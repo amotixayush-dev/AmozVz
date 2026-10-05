@@ -63,28 +63,31 @@ fun MainDashboardScreen(
     val scope = rememberCoroutineScope()
 
     var selectedMode by remember { mutableStateOf(prefs.dictationMode) }
+    var selectedInputTab by remember { mutableIntStateOf(0) } // 0 = Voice, 1 = Paste Text
+    var pastedRawText by remember { mutableStateOf("") }
+
     var isListening by remember { mutableStateOf(false) }
-    var isPolishing by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
     var lastResult by remember { mutableStateOf<TranscriptionResult?>(null) }
-    var statusMessage by remember { mutableStateOf("Ready to dictate") }
+    var statusMessage by remember { mutableStateOf("Ready to post-process speech") }
 
     val speechRecognizer = remember {
         OnDeviceSpeechRecognizer(context).apply {
             onFinalResult = { raw ->
                 isListening = false
-                isPolishing = true
-                statusMessage = "Polishing with AI..."
+                isProcessing = true
+                statusMessage = "Post-processing speech..."
                 scope.launch {
                     val result = engine.processSpeechText(raw)
                     lastResult = result
-                    isPolishing = false
-                    statusMessage = "Dictation polished & copied to clipboard! 📋"
+                    isProcessing = false
+                    statusMessage = "Speech finalized & copied to clipboard! 📋"
                     ClipboardHelper.copyToClipboard(context, result.cleanedText, showToast = true)
                 }
             }
             onError = { error ->
                 isListening = false
-                isPolishing = false
+                isProcessing = false
                 statusMessage = error
             }
         }
@@ -106,7 +109,7 @@ fun MainDashboardScreen(
                                 .background(GreenSuccess)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("AmozVz Flow")
+                        Text("AmozVz Post-Processor")
                     }
                 },
                 actions = {
@@ -130,8 +133,8 @@ fun MainDashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Safe Permission Banner (if missing microphone permission)
-            if (!hasMicPermission) {
+            // Safe Permission Banner (only if missing microphone in voice tab)
+            if (!hasMicPermission && selectedInputTab == 0) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -151,7 +154,7 @@ fun MainDashboardScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Microphone Access Needed", style = MaterialTheme.typography.titleSmall)
-                                Text("Only needed to capture voice for dictation.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                                Text("Only needed for live voice recording.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                             }
                             Button(
                                 onClick = onOpenPermissions,
@@ -164,10 +167,30 @@ fun MainDashboardScreen(
                 }
             }
 
-            // Dictation Mode Selector
+            // Input Selection TabRow (Voice vs Paste Text)
             item {
-                Text("Dictation Mode", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(6.dp))
+                TabRow(
+                    selectedTabIndex = selectedInputTab,
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Tab(
+                        selected = selectedInputTab == 0,
+                        onClick = { selectedInputTab = 0 },
+                        text = { Text("🎙️ Voice Dictate") }
+                    )
+                    Tab(
+                        selected = selectedInputTab == 1,
+                        onClick = { selectedInputTab = 1 },
+                        text = { Text("📝 Paste Speech") }
+                    )
+                }
+            }
+
+            // Context Mode Selector Chips (Auto, Email, Chat, Code, Lists)
+            item {
+                Text("Target Formatting Context", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(4.dp))
                 DictationModeSelector(
                     selectedMode = selectedMode,
                     onModeSelected = { mode ->
@@ -177,73 +200,145 @@ fun MainDashboardScreen(
                 )
             }
 
-            // Interactive Live Dictation Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+            // Tab 0: Voice Dictation Pad
+            if (selectedInputTab == 0) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
-                        Text("Voice Dictation Pad", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Speak naturally. Hesitations and self-corrections are cleaned automatically.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        WaveformVisualizer(isRecording = isListening)
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = statusMessage,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isListening) MicRecordingRed else TextSecondary
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = {
-                                if (!PermissionHelper.hasRecordAudioPermission(context)) {
-                                    onOpenPermissions()
-                                    return@Button
-                                }
-
-                                if (!isListening) {
-                                    isListening = true
-                                    statusMessage = "Listening... Speak naturally"
-                                    speechRecognizer.startListening()
-                                } else {
-                                    speechRecognizer.stopListening()
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isListening) MicRecordingRed else AccentPurple
-                            )
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
-                                contentDescription = null
+                            Text("Voice Dictation Pad", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Speak naturally with hesitations or self-corrections. They will be resolved cleanly.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (isListening) "Stop & Polish Speech" else "Start Speaking")
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            WaveformVisualizer(isRecording = isListening)
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = statusMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isListening) MicRecordingRed else TextSecondary
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(
+                                onClick = {
+                                    if (!PermissionHelper.hasRecordAudioPermission(context)) {
+                                        onOpenPermissions()
+                                        return@Button
+                                    }
+
+                                    if (!isListening) {
+                                        isListening = true
+                                        statusMessage = "Listening... Speak naturally"
+                                        speechRecognizer.startListening()
+                                    } else {
+                                        speechRecognizer.stopListening()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isListening) MicRecordingRed else AccentPurple
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(if (isListening) "Stop & Finalize Text" else "Start Speaking")
+                            }
                         }
                     }
                 }
             }
 
-            // Results Card with Auto-Copy and Quick Share
+            // Tab 1: Paste Raw Transcription Pad
+            if (selectedInputTab == 1) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Raw Spoken Speech Input", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Paste unedited transcription (e.g. \"Let's meet at 4, wait, no, 5 PM\")",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            OutlinedTextField(
+                                value = pastedRawText,
+                                onValueChange = { pastedRawText = it },
+                                placeholder = { Text("Paste raw speech transcription here...") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 120.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        if (pastedRawText.isNotBlank()) {
+                                            isProcessing = true
+                                            scope.launch {
+                                                val result = engine.processSpeechText(pastedRawText)
+                                                lastResult = result
+                                                isProcessing = false
+                                                ClipboardHelper.copyToClipboard(context, result.cleanedText, showToast = true)
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AccentPurple),
+                                    enabled = pastedRawText.isNotBlank() && !isProcessing
+                                ) {
+                                    Icon(Icons.Default.AutoFixHigh, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(if (isProcessing) "Post-Processing..." else "Clean & Finalize Text")
+                                }
+
+                                if (pastedRawText.isNotBlank()) {
+                                    OutlinedButton(
+                                        onClick = { pastedRawText = "" },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text("Clear")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Results Card - Displaying ONLY the finalized text (Rule 6)
             item {
                 AnimatedVisibility(visible = lastResult != null) {
                     lastResult?.let { result ->
@@ -258,7 +353,7 @@ fun MainDashboardScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("AmozVz Polished Text", style = MaterialTheme.typography.titleMedium)
+                                    Text("Finalized Written Text", style = MaterialTheme.typography.titleMedium)
                                     Row {
                                         IconButton(onClick = {
                                             ClipboardHelper.copyToClipboard(context, result.cleanedText)
@@ -273,18 +368,27 @@ fun MainDashboardScreen(
                                     }
                                 }
 
-                                Text(
-                                    text = result.cleanedText,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surface
+                                ) {
+                                    Text(
+                                        text = result.cleanedText,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
 
                                 Spacer(modifier = Modifier.height(12.dp))
                                 HorizontalDivider()
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 Text(
-                                    text = "Raw Spoken: \"${result.rawText}\"",
+                                    text = "Raw Input: \"${result.rawText}\"",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
                                 )

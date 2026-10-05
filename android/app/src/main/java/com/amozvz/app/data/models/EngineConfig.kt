@@ -13,6 +13,6 @@ data class EngineConfig(
     val apiKey: String = "",
     val stripHesitations: Boolean = true,
     val resolveCorrections: Boolean = true,
-    val mode: DictationMode = DictationMode.FLOW_NATURAL,
+    val mode: DictationMode = DictationMode.AUTO,
     val customDictionary: Map<String, String> = emptyMap()
 )

@@ -20,10 +20,11 @@ FILLER_WORDS = [
     r"\byou\s+know\b",
     r"\bkind\s+of\b",
     r"\bsort\s+of\b",
+    r"\bactually\b",
+    r"\bI\s+mean\b",
     r"\bbasically\b",
     r"\bliterally\b",
     r"\bso\s+yeah\b",
-    r"\bI\s+mean\b",
 ]
 
 # Spoken punctuation commands to symbols
@@ -43,16 +44,16 @@ PUNCTUATION_COMMANDS: List[Tuple[re.Pattern, str]] = [
 ]
 
 # Self-correction trigger patterns
-# e.g.: "meet at 2 wait actually 3:30" -> replaces target
+# e.g.: "Let's meet at 4, wait, no, 5 PM" -> "Let's meet at 5:00 PM"
 CORRECTION_PATTERNS = [
-    # "scratch that, [replacement]"
-    re.compile(r"(?:^|(?<=[.!?,\s]))(?P<before>.+?)\s*,?\s*(?:scratch\s+that|never\s+mind(?:\s+that)?)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
     # "wait no, [replacement]" / "no wait, [replacement]"
-    re.compile(r"(?:^|(?<=[.!?,\s]))(?P<before>.+?)\s*,?\s*(?:wait\s+no|no\s+wait|wait\s+actually|actually\s+wait)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
-    # "[target] actually [replacement]" (e.g. "at 4 actually at 5")
-    re.compile(r"(?:^|(?<=[.!?,\s]))(?P<before>.+?)\s*,?\s*(?:actually|no\s+I\s+meant|or\s+rather|correction)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
-    # "wait make that [replacement]"
-    re.compile(r"(?:^|(?<=[.!?,\s]))(?P<before>.+?)\s*,?\s*(?:wait\s+make\s+that|make\s+that)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
+    re.compile(r"(?:^|(?<=[.!?\s]))(?P<before>.+?)\s*,?\s*(?:wait,?\s*no|no,?\s*wait|wait,?\s*actually|actually,?\s*wait)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
+    # "scratch that, [replacement]" or "never mind that, [replacement]"
+    re.compile(r"(?:^|(?<=[.!?\s]))(?P<before>.+?)\s*,?\s*(?:scratch\s+that|never\s+mind(?:\s+that)?)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
+    # "wait make that [replacement]" or "make that [replacement]"
+    re.compile(r"(?:^|(?<=[.!?\s]))(?P<before>.+?)\s*,?\s*(?:wait\s+make\s+that|make\s+that)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
+    # "or rather, [replacement]" or "correction, [replacement]"
+    re.compile(r"(?:^|(?<=[.!?\s]))(?P<before>.+?)\s*,?\s*(?:or\s+rather|correction)\s*,?\s*(?P<after>.+)$", re.IGNORECASE),
 ]
 
 
@@ -69,7 +70,7 @@ class RuleBasedHesitationCleaner:
         strip_hesitations: bool = True,
         resolve_corrections: bool = True,
         custom_dict: Optional[Dict[str, str]] = None,
-        mode: DictationMode = DictationMode.FLOW_NATURAL,
+        mode: DictationMode = DictationMode.AUTO,
     ) -> Tuple[str, DictationMetrics]:
         start_time = time.perf_counter()
         raw = text.strip()
@@ -81,19 +82,18 @@ class RuleBasedHesitationCleaner:
         corrections_count = 0
 
         # 1. Resolve self-corrections / speech changes if enabled
-        if resolve_corrections and mode != DictationMode.RAW_VERBATIM:
+        if resolve_corrections:
             cleaned, corrections_count = cls._resolve_corrections(cleaned)
 
         # 2. Convert explicit spoken punctuation commands
         cleaned = cls._apply_spoken_punctuation(cleaned)
 
         # 3. Strip hesitations & filler words if enabled
-        if strip_hesitations and mode != DictationMode.RAW_VERBATIM:
+        if strip_hesitations:
             cleaned, hesitations_count = cls._strip_hesitations(cleaned)
 
         # 4. Remove stutter repetition (e.g., "I I think", "the the meeting")
-        if mode != DictationMode.RAW_VERBATIM:
-            cleaned = cls._remove_stutters(cleaned)
+        cleaned = cls._remove_stutters(cleaned)
 
         # 5. Apply custom dictionary substitutions
         if custom_dict:
@@ -101,10 +101,13 @@ class RuleBasedHesitationCleaner:
                 pattern = re.compile(r"\b" + re.escape(source) + r"\b", re.IGNORECASE)
                 cleaned = pattern.sub(replacement, cleaned)
 
-        # 6. Apply formatting based on mode
+        # 6. Normalize time expressions (e.g. 5 PM -> 5:00 PM)
+        cleaned = cls._normalize_time_expressions(cleaned)
+
+        # 7. Apply formatting based on mode
         cleaned = cls._format_by_mode(cleaned, mode)
 
-        # 7. Normalize punctuation spacing & sentence capitalization
+        # 8. Normalize punctuation spacing & sentence capitalization
         cleaned = cls._normalize_grammar_and_spacing(cleaned)
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
@@ -127,22 +130,23 @@ class RuleBasedHesitationCleaner:
                 before = match.group("before").strip()
                 after = match.group("after").strip()
                 
-                # If before and after are clauses, inspect if before has a matching predicate or if it was a complete replacement
-                # E.g.: "meet tomorrow at 2 wait make that 3:30 pm"
-                # If after is a fragment (e.g., "3:30 pm" or "Tuesday"), replace the last token or phrase in before.
                 after_words = after.split()
                 before_words = before.split()
                 
-                # Check for direct word/fragment substitution
-                if len(after_words) <= 3 and len(before_words) >= len(after_words):
-                    # Replace the ending tokens of before with after
-                    kept_before = " ".join(before_words[:-len(after_words)])
-                    if kept_before:
-                        result = f"{kept_before} {after}"
+                if after_words and before_words:
+                    last_before = before_words[-1].rstrip(".,?!")
+                    first_after = after_words[0].rstrip(".,?!")
+                    
+                    if re.match(r"^\d+(:?\d+)?$", last_before) and re.match(r"^\d+(:?\d+)?$", first_after):
+                        replace_count = 1
+                    elif len(after_words) <= 3 and len(before_words) >= len(after_words):
+                        replace_count = len(after_words)
                     else:
-                        result = after
+                        replace_count = min(len(after_words), len(before_words))
+                        
+                    kept_before = " ".join(before_words[:-replace_count]).rstrip(",")
+                    result = f"{kept_before} {after}" if kept_before else after
                 else:
-                    # Full clause replacement: replace previous false-start clause
                     result = after
                     
                 count += 1
@@ -162,21 +166,25 @@ class RuleBasedHesitationCleaner:
         res = text
         count = 0
 
+        # Clean filler "like" before adjacent fillers consume boundary commas
+        like_patterns = [
+            re.compile(r"(?:^|[\s,])like\s*,", re.IGNORECASE),
+            re.compile(r",\s*like(?:\s*,|\s+)", re.IGNORECASE),
+            re.compile(r"(?:^|[.!?\n])\s*like\s+(?=(?:we|I|you|they|it|he|she|this|that|what|how|why|when|where|there)\b)", re.IGNORECASE),
+        ]
+        for lp in like_patterns:
+            matches = lp.findall(res)
+            if matches:
+                count += len(matches)
+                res = lp.sub(" ", res)
+
         # Replace vocalized fillers
         for filler in FILLER_WORDS:
-            # Match filler optionally flanked by commas/punctuation e.g. ", um," or "um,"
             filler_pattern = re.compile(r"(?:,\s*)?" + filler + r"(?:\s*,)?", re.IGNORECASE)
             matches = filler_pattern.findall(res)
             if matches:
                 count += len(matches)
                 res = filler_pattern.sub(" ", res)
-
-        # Replace filler "like" when surrounded by commas or at start of phrase e.g. "I was, like, so happy"
-        like_filler_pattern = re.compile(r"(?:,\s*like\s*,|\s+like\s*,|,\s*like\s+)", re.IGNORECASE)
-        like_matches = like_filler_pattern.findall(res)
-        if like_matches:
-            count += len(like_matches)
-            res = like_filler_pattern.sub(" ", res)
 
         # Clean orphaned double commas, leading commas, or weird spacing
         res = re.sub(r",\s*,+", ",", res)
@@ -187,35 +195,61 @@ class RuleBasedHesitationCleaner:
 
     @classmethod
     def _remove_stutters(cls, text: str) -> str:
-        # Matches word repeated consecutively: "we we", "the the", "I I"
         repetition_pattern = re.compile(r"\b(\w+)\s+\1\b", re.IGNORECASE)
-        # Apply twice in case of triple repetitions ("I I I")
         res = repetition_pattern.sub(r"\1", text)
         res = repetition_pattern.sub(r"\1", res)
-        
-        # Matches hyphenated stutter syllables: "w-what", "th-the"
         hyphen_stutter = re.compile(r"\b[a-zA-Z]{1,2}-\b", re.IGNORECASE)
         res = hyphen_stutter.sub("", res)
         return res
 
     @classmethod
+    def _normalize_time_expressions(cls, text: str) -> str:
+        time_regex = re.compile(r"\b(\d{1,2})\s*(AM|PM|am|pm)\b")
+        return time_regex.sub(lambda m: f"{m.group(1)}:00 {m.group(2).upper()}", text)
+
+    @classmethod
     def _format_by_mode(cls, text: str, mode: DictationMode) -> str:
-        if mode == DictationMode.BULLET_POINTS:
-            # Split by period or semicolon or list keywords (first, second, also, next)
+        # Code mode or code keywords
+        is_code = mode == DictationMode.CODE or (
+            mode == DictationMode.AUTO and bool(re.search(r"\b(def |class |import |function|const |var |SELECT |FROM )\b", text, re.IGNORECASE))
+        )
+        if is_code:
+            return f"```\n{text}\n```" if not text.startswith("```") else text
+
+        # List mode (Rule 4)
+        is_list = mode == DictationMode.LISTS or (
+            mode == DictationMode.AUTO and bool(re.search(r"\b(step 1|step 2|first|second|third|item 1|item 2)\b", text, re.IGNORECASE))
+        )
+        if is_list:
+            numbered_match = bool(re.search(r"\b(first|second|third|step 1|step 2|1\.|2\.)\b", text, re.IGNORECASE))
             lines = []
-            raw_segments = re.split(r"(?<=[.!?])\s+|\s+(?:first|second|third|next|finally|also)\s+", text, flags=re.IGNORECASE)
+            raw_segments = re.split(r"(?<=[.!?])\s+|\s+(?:first|second|third|next|finally|also|then)\s+", text, flags=re.IGNORECASE)
+            idx = 1
             for seg in raw_segments:
-                seg = seg.strip().lstrip("-*•").strip()
+                seg = seg.strip().lstrip("-*•0123456789.)").strip()
+                seg = re.sub(r"^(?:first|second|third|fourth|fifth|next|finally|also|then|step\s*\d+)\s*,?\s*", "", seg, flags=re.IGNORECASE)
                 if seg:
-                    # Ensure first char is capitalized
                     seg = seg[0].upper() + seg[1:] if len(seg) > 1 else seg.upper()
-                    lines.append(f"- {seg}")
+                    if numbered_match:
+                        lines.append(f"{idx}. {seg}")
+                        idx += 1
+                    else:
+                        lines.append(f"- {seg}")
             return "\n".join(lines) if lines else text
+
+        # Email context (Rule 5)
+        if mode == DictationMode.EMAIL:
+            text = re.sub(r"\b(hi|hello|dear)\s+([a-zA-Z]+)(?:\s*,|\s+comma)?", r"\1 \2,\n\n", text, flags=re.IGNORECASE)
+            text = re.sub(r"\b(best regards|warm regards|thanks|thank you|sincerely|cheers)(?:\s*,|\s+comma)?\s*([a-zA-Z\s]*)$", r"\n\n\1,\n\2", text, flags=re.IGNORECASE)
 
         return text
 
     @classmethod
     def _normalize_grammar_and_spacing(cls, text: str) -> str:
+        # If code block, preserve as-is
+        if text.startswith("```") and text.endswith("```"):
+            return text
+
         # Normalize multiple spaces and whitespace around newlines
         res = re.sub(r"[ \t]+", " ", text)
         res = re.sub(r"\s*\n\s*", "\n", res)
@@ -242,8 +276,8 @@ class RuleBasedHesitationCleaner:
         res = re.sub(r"\bi\b", "I", res)
         res = re.sub(r"\bi'([a-z]+)\b", r"I'\1", res)
 
-        # Add closing punctuation if completely missing and not bullet mode
-        if res and not res.endswith((".", "!", "?", "\n", '"', "'", "-")):
+        # Add closing punctuation if completely missing and not bullet or code mode
+        if res and not res.endswith((".", "!", "?", "\n", '"', "'", "-", "`")):
             if not res.startswith("-"):
                 res += "."
 
@@ -278,7 +312,7 @@ class AmozVzAgent:
     def clean(
         self,
         raw_text: str,
-        mode: DictationMode = DictationMode.FLOW_NATURAL,
+        mode: DictationMode = DictationMode.AUTO,
         strip_hesitations: bool = True,
         resolve_corrections: bool = True,
         custom_dict: Optional[Dict[str, str]] = None,

@@ -18,7 +18,7 @@ class PreferencesManager(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_OVERLAY_ENABLED, value).apply()
 
     var dictationMode: DictationMode
-        get() = DictationMode.fromId(prefs.getString(KEY_DICTATION_MODE, DictationMode.FLOW_NATURAL.id) ?: DictationMode.FLOW_NATURAL.id)
+        get() = DictationMode.fromId(prefs.getString(KEY_DICTATION_MODE, DictationMode.AUTO.id) ?: DictationMode.AUTO.id)
         set(value) = prefs.edit().putString(KEY_DICTATION_MODE, value.id).apply()
 
     var aiProvider: AIProvider

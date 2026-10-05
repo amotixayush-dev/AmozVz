@@ -1,6 +1,6 @@
 """
-Unit tests for AmozVz AI Voice-to-Text Agent.
-Validates hesitations, self-corrections, speech changes, punctuations, and modes.
+Unit tests for AmozVz Advanced Voice-to-Text Post-Processor.
+Validates the 6 strict post-processing rules.
 """
 
 import unittest
@@ -13,85 +13,74 @@ class TestAmozVzAgent(unittest.TestCase):
     def setUp(self):
         self.agent = AmozVzAgent(provider="rule_based")
 
-    def test_hesitations_removal(self):
-        """Tests that vocal hesitations and filler sounds are cleanly stripped."""
-        raw = "Um, uh, hello everyone, ah, we are, you know, basically ready to start."
-        resp = self.agent.clean(raw, mode=DictationMode.FLOW_NATURAL)
-        
+    def test_rule1_remove_all_filler_words(self):
+        """Rule 1: Remove all filler words (um, uh, like, you know, actually, I mean)."""
+        raw = "Um, uh, like, you know, we should actually start, I mean basically now."
+        resp = self.agent.clean(raw, mode=DictationMode.AUTO)
+
         self.assertNotIn("um", resp.cleaned_text.lower())
         self.assertNotIn("uh", resp.cleaned_text.lower())
         self.assertNotIn("you know", resp.cleaned_text.lower())
+        self.assertNotIn("actually", resp.cleaned_text.lower())
+        self.assertNotIn("i mean", resp.cleaned_text.lower())
         self.assertNotIn("basically", resp.cleaned_text.lower())
-        self.assertIn("Hello everyone", resp.cleaned_text)
-        self.assertIn("ready to start", resp.cleaned_text)
-        self.assertGreater(resp.metrics.hesitations_removed_count, 0)
+        self.assertIn("We should start", resp.cleaned_text)
 
-    def test_stutter_repetition_removal(self):
-        """Tests that stuttered consecutive words and syllable repetitions are cleaned."""
-        raw = "I I think we we should schedule th-the appointment."
-        resp = self.agent.clean(raw, mode=DictationMode.FLOW_NATURAL)
-        
-        self.assertEqual(resp.cleaned_text, "I think we should schedule the appointment.")
+    def test_rule2_resolve_self_corrections_example(self):
+        """Rule 2: Resolve self-corrections (e.g. 'Let's meet at 4, wait, no, 5 PM' -> 'Let's meet at 5:00 PM')."""
+        raw = "Let's meet at 4, wait, no, 5 PM"
+        resp = self.agent.clean(raw, mode=DictationMode.AUTO)
 
-    def test_self_correction_scratch_that(self):
-        """Tests 'scratch that' speech change correction."""
+        self.assertNotIn("4", resp.cleaned_text)
+        self.assertIn("5:00 PM", resp.cleaned_text)
+        self.assertEqual("Let's meet at 5:00 PM.", resp.cleaned_text)
+
+    def test_rule2_scratch_that(self):
+        """Rule 2: 'scratch that' speech change correction."""
         raw = "Send the invoice to Sarah, scratch that, send it to Michael."
-        resp = self.agent.clean(raw, mode=DictationMode.FLOW_NATURAL)
-        
+        resp = self.agent.clean(raw, mode=DictationMode.AUTO)
+
         self.assertNotIn("Sarah", resp.cleaned_text)
         self.assertIn("Michael", resp.cleaned_text)
-        self.assertEqual(resp.cleaned_text, "Send it to Michael.")
+        self.assertEqual("Send it to Michael.", resp.cleaned_text)
 
-    def test_self_correction_wait_make_that(self):
-        """Tests time/target correction like 'meet at 2 wait make that 3:30 PM'."""
-        raw = "Let's meet at 2:00 wait make that 3:30 PM tomorrow."
-        resp = self.agent.clean(raw, mode=DictationMode.FLOW_NATURAL)
-        
-        self.assertNotIn("2:00", resp.cleaned_text)
-        self.assertIn("3:30 PM", resp.cleaned_text)
+    def test_rule3_apply_natural_grammar_and_punctuation(self):
+        """Rule 3: Natural grammar, capitalization, and punctuation."""
+        raw = "hello everyone how are you today period i hope you are having a wonderful week"
+        resp = self.agent.clean(raw, mode=DictationMode.AUTO)
 
-    def test_spoken_punctuation_conversion(self):
-        """Tests spoken voice punctuation commands (period, comma, question mark)."""
-        raw = "Hello John comma how are you doing today question mark I hope everything is great period"
-        resp = self.agent.clean(raw, mode=DictationMode.FLOW_NATURAL)
-        
-        self.assertEqual(resp.cleaned_text, "Hello John, how are you doing today? I hope everything is great.")
+        self.assertTrue(resp.cleaned_text.startswith("Hello"))
+        self.assertIn("I hope", resp.cleaned_text)
+        self.assertTrue(resp.cleaned_text.endswith("."))
 
-    def test_bullet_points_mode(self):
-        """Tests bullet point mode formatting."""
-        raw = "Buy apples. Buy oranges. Buy milk."
-        resp = self.agent.clean(raw, mode=DictationMode.BULLET_POINTS)
-        
+    def test_rule4_auto_structure_lists(self):
+        """Rule 4: Auto-structure lists into clean bullet points or numbered lists."""
+        raw = "First buy milk. Second buy eggs. Third buy bread."
+        resp = self.agent.clean(raw, mode=DictationMode.LISTS)
+
         lines = resp.cleaned_text.strip().split("\n")
-        self.assertTrue(all(line.startswith("- ") for line in lines))
-        self.assertIn("Buy apples", resp.cleaned_text)
-        self.assertIn("Buy oranges", resp.cleaned_text)
-        self.assertIn("Buy milk", resp.cleaned_text)
+        self.assertTrue(len(lines) >= 3)
+        self.assertTrue(any("Buy milk" in line for line in lines))
+        self.assertTrue(any("Buy eggs" in line for line in lines))
+        self.assertTrue(any("Buy bread" in line for line in lines))
 
-    def test_raw_verbatim_mode(self):
-        """Tests that raw verbatim keeps filler words untouched."""
-        raw = "Um, this is uh verbatim test."
-        resp = self.agent.clean(raw, mode=DictationMode.RAW_VERBATIM)
-        
-        self.assertIn("Um", resp.cleaned_text)
-        self.assertIn("uh", resp.cleaned_text)
+    def test_rule5_context_code_formatting(self):
+        """Rule 5: Adapt formatting to context (code blocks for code)."""
+        raw = "def calculate_sum(a, b): return a + b"
+        resp = self.agent.clean(raw, mode=DictationMode.CODE)
 
-    def test_custom_dictionary(self):
-        """Tests replacement of user-defined jargon or names."""
-        raw = "We are deploying to k8s using amoz vz."
-        custom_dict = {"k8s": "Kubernetes", "amoz vz": "AmozVz"}
-        resp = self.agent.clean(raw, custom_dict=custom_dict)
-        
-        self.assertIn("Kubernetes", resp.cleaned_text)
-        self.assertIn("AmozVz", resp.cleaned_text)
+        self.assertTrue(resp.cleaned_text.startswith("```"))
+        self.assertTrue(resp.cleaned_text.endswith("```"))
+        self.assertIn("def calculate_sum", resp.cleaned_text)
 
-    def test_capitalization_and_periods(self):
-        """Tests sentence casing and closing punctuation."""
-        raw = "this is sentence one. this is sentence two"
-        resp = self.agent.clean(raw)
-        
-        self.assertTrue(resp.cleaned_text.startswith("This"))
-        self.assertIn("This is sentence two.", resp.cleaned_text)
+    def test_rule6_no_preamble_or_commentary(self):
+        """Rule 6: Return ONLY the finalized text without conversational filler."""
+        raw = "Um, this is our finalized text."
+        resp = self.agent.clean(raw, mode=DictationMode.AUTO)
+
+        self.assertFalse(resp.cleaned_text.startswith("Here is"))
+        self.assertFalse(resp.cleaned_text.startswith("Cleaned:"))
+        self.assertEqual("This is our finalized text.", resp.cleaned_text)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 <div align="center">
 
 # 🎙️ AmozVz
-### Open-Source Voice-to-Text AI Agent with Hesitation & Speech Change Understanding
+### Open-Source Advanced Voice-to-Text Post-Processor
 *Inspired by [Wispr Flow](https://play.google.com/store/apps/details?id=com.wispr.flowapp)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -13,7 +13,7 @@
 
 <br/>
 
-[![Download APK](https://img.shields.io/badge/Download_APK-v1.0.1_Release-brightgreen?style=for-the-badge&logo=android)](https://github.com/amotixayush-dev/AmozVz/releases/latest)
+[![Download APK](https://img.shields.io/badge/Download_APK-v1.0.2_Release-brightgreen?style=for-the-badge&logo=android)](https://github.com/amotixayush-dev/AmozVz/releases/download/v1.0.2/AmozVz-v1.0.2.apk)
 
 </div>
 
@@ -21,46 +21,53 @@
 
 ## 🌟 Overview
 
-**AmozVz** is an open-source, AI-powered voice-to-text dictation agent designed for Android, Linux, and macOS. Unlike traditional dictation software that records your speech verbatim with awkward pauses and filler words, **AmozVz understands how humans actually speak**.
-
-Just like **Wispr Flow**, AmozVz lets you speak naturally, automatically removes hesitations, fixes mid-sentence corrections, formats punctuation, and injects clean text directly into **WhatsApp, Slack, Gmail, Google Docs, Telegram, Notes, or any app**.
+**AmozVz** is an advanced open-source voice-to-text post-processor and AI dictation agent designed for Android and Python. Unlike traditional speech-to-text tools that transcribe your voice verbatim with awkward pauses, filler sounds, and false starts, **AmozVz converts messy spoken-word transcriptions into clean, beautifully formatted written text while strictly preserving your original intent and meaning**.
 
 ```
-🎙️ What You Say:
-"Um, uh, hey team, let's reschedule our sync to 2:00, wait make that 3:30 PM tomorrow, period."
+🎙️ Raw Spoken Dictation:
+"Um, uh, hey team, let's meet at 4, wait, no, 5 PM to review the release, period."
 
-✨ What AmozVz Types:
-"Hey team, let's reschedule our sync to 3:30 PM tomorrow."
+✨ AmozVz Finalized Output:
+"Hey team, let's meet at 5:00 PM to review the release."
 ```
 
 ---
 
-## 🚀 Key Features
+## ⚡ The 6 Strict Post-Processing Rules
 
-- **🧠 Hesitation & Vocal Filler Removal**:
-  Filters out vocal fillers like *"um"*, *"uh"*, *"er"*, *"ah"*, *"you know"*, *"kind of"*, *"basically"*, and repetitive stutters while preserving intentional words.
+AmozVz strictly follows six rules on-device and in the backend engine:
 
-- **🔄 Self-Correction & Speech Changes**:
-  Understands when you change your mind mid-sentence (*"scratch that"*, *"no wait"*, *"wait actually"*, *"make that [X]"*) and resolves the final intended thought seamlessly.
+1. **Remove All Filler Words**: Eliminates `"um"`, `"uh"`, `"like"`, `"you know"`, `"actually"`, `"I mean"`, `"basically"`, and repetitive stutters.
+2. **Resolve Self-Corrections Seamlessly**: Naturally detects when you change your mind mid-sentence:
+   - *"Let's meet at 4, wait, no, 5 PM"* ➔ **"Let's meet at 5:00 PM."**
+   - *"Send the report to Alice, scratch that, send it to Bob"* ➔ **"Send it to Bob."**
+3. **Natural Grammar, Capitalization, and Punctuation**: Sentence casing, comma normalization, period termination, and spoken punctuation symbols (`period`, `comma`, `new line`).
+4. **Auto-Structure Output**: Automatically detects step-by-step instructions or lists and formats them as clean bullet points or numbered lists (`1. Step one`, `2. Step two`).
+5. **Adapt Formatting to Context**:
+   - `💻 Code`: Formats blocks with markdown triple backticks.
+   - `✉️ Email`: Formats salutations and professional sign-offs.
+   - `💬 Chat`: Concise, conversational style.
+   - `📝 Lists`: Formats multi-step thoughts into bullet points.
+   - `✨ Auto`: Detects the best formatting context automatically.
+6. **No Preamble or Commentary**: Returns **ONLY** the finalized text. Zero conversational filler or introductory remarks like *"Here is your cleaned text:"*.
 
-- **✍️ Automatic Punctuation & Formatting**:
-  Inserts periods, commas, question marks, capitalization, and paragraphs naturally or via spoken commands (*"comma"*, *"new line"*, *"question mark"*).
+---
 
-- **🪟 Floating Mic Overlay Widget (`SYSTEM_ALERT_WINDOW`)**:
-  A draggable, edge-snapping floating button that stays over any app so you can dictate on the fly without switching screens.
+## 📱 Android App Features
 
-- **⚡ Universal In-App Text Injection (`AccessibilityService`)**:
-  Automatically types or pastes your polished words directly into the active input field across any app on your phone.
-
-- **🔔 Foreground Recording & Notification Control**:
-  Complies with Android 14+ foreground service standards (`FOREGROUND_SERVICE_MICROPHONE`) with ongoing notification controls (Stop/Cancel).
-
-- **⌨️ Optional Voice Keyboard (IME)**:
-  Includes a built-in Input Method Service so users can dictate right from their keyboard tray.
-
-- **🔒 Offline & Cloud Hybrid Engine**:
-  - **Zero-Cloud On-Device Mode**: Fast, deterministic regex & NLP algorithm (`HesitationFilter.kt`) that runs completely offline with 0ms latency.
-  - **Cloud AI Mode**: Integrates with Groq Whisper, OpenAI Whisper, Google Gemini, or self-hosted Ollama for state-of-the-art context-aware rewriting.
+- **🎛️ Dual-Input Mode**:
+  - **🎙️ Voice Dictate**: Tap the mic to record with real-time waveform visualization and on-device speech recognition.
+  - **📝 Paste Speech**: Paste raw transcriptions from any voice memo, Whisper output, or meeting recorder and post-process instantly.
+- **🛡️ Zero Sensitive Data Access (Clean Install Guarantee)**:
+  - **NO** `BIND_ACCESSIBILITY_SERVICE` (no screen reading or keystroke tracking).
+  - **NO** `SYSTEM_ALERT_WINDOW` (no draw-over-apps).
+  - **NO** `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+  - Installs cleanly across all Android devices without security warnings or Play Protect blocks.
+- **🔏 V2 Scheme Signed**:
+  - Pre-signed with Android APK Signature Scheme v2.
+- **📋 1-Tap Copy & Native Share**:
+  - Instant auto-copy to clipboard.
+  - Quick share to WhatsApp, Slack, Gmail, Telegram, Notion, Notes, and more.
 
 ---
 
@@ -68,58 +75,50 @@ Just like **Wispr Flow**, AmozVz lets you speak naturally, automatically removes
 
 ```mermaid
 flowchart TD
-    subgraph Android["Android Client (AmozVz)"]
-        Overlay["Floating Mic Overlay\n(SYSTEM_ALERT_WINDOW)"]
-        Foreground["Foreground Dictation Service\n(Microphone Lock & Notification)"]
-        Rec["AudioRecorder / SpeechRecognizer"]
-        Accessibility["AmozVzAccessibilityService\n(Focus & Text Injection)"]
-        LocalEngine["On-Device HesitationFilter\n(Offline, < 5ms)"]
-        CloudClient["CloudAgentClient\n(Groq / OpenAI / AmozVz Server)"]
+    subgraph Input["Input Options"]
+        Mic["🎙️ Live Voice Recording\n(On-Device SpeechRecognizer)"]
+        Paste["📝 Paste Speech Transcripts\n(From Whisper, Memos, Audio)"]
     end
 
-    subgraph TargetApp["Any Android App (WhatsApp, Slack, Gmail, Notes)"]
-        InputField["Focused Editable Input"]
+    subgraph Core["AmozVz Post-Processing Core"]
+        Corrections["1. Self-Correction Resolver\n('wait, no', 'scratch that')"]
+        Fillers["2. Filler Word Remover\n('um', 'uh', 'you know', 'actually')"]
+        TimeNorm["3. Time & Punctuation Normalizer\n('5 PM' -> '5:00 PM', 'period' -> '.')"]
+        Context["4. Context Formatter\n(Code Blocks, Lists, Email, Chat)"]
+        Grammar["5. Grammar & Spacing Polisher\n(Capitalization, Spacing, Periods)"]
     end
 
-    Overlay -->|User Taps Mic| Foreground
-    Foreground --> Rec
-    Rec --> LocalEngine
-    Rec --> CloudClient
-    LocalEngine --> Overlay
-    CloudClient --> Overlay
-    Overlay -->|Auto-Type Cleaned Text| Accessibility
-    Accessibility --> InputField
+    subgraph Output["Zero-Preamble Output"]
+        Display["Polished Final Text Display"]
+        Clipboard["📋 1-Tap Clipboard Copy"]
+        Share["📤 Native Android Share Sheet"]
+    end
+
+    Mic --> Corrections
+    Paste --> Corrections
+    Corrections --> Fillers
+    Fillers --> TimeNorm
+    TimeNorm --> Context
+    Context --> Grammar
+    Grammar --> Display
+    Display --> Clipboard
+    Display --> Share
 ```
 
-For full details, read [ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
 ---
 
-## 🛡️ Permissions & Security
+## 🛡️ Permissions & Privacy
 
-AmozVz matches the permission model used by [Wispr Flow](https://play.google.com/store/apps/details?id=com.wispr.flowapp):
+AmozVz respects user privacy and uses the minimum standard permissions:
 
-| Permission | Android Identifier | Purpose |
-| :--- | :--- | :--- |
-| **Microphone** | `android.permission.RECORD_AUDIO` | High-fidelity voice capture for dictation |
-| **App Overlay** | `android.permission.SYSTEM_ALERT_WINDOW` | Draggable floating mic button over other apps |
-| **Accessibility** | `android.permission.BIND_ACCESSIBILITY_SERVICE` | Automatic text injection into focused app fields |
-| **Notifications** | `android.permission.POST_NOTIFICATIONS` | Foreground service recording status and quick controls |
-| **Mic Service** | `android.permission.FOREGROUND_SERVICE_MICROPHONE` | Android 14+ background microphone stability |
-| **Battery Exemption** | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Prevents Android OS from killing the floating widget |
+| Permission | Android Identifier | Purpose | Sensitive? |
+| :--- | :--- | :--- | :---: |
+| **Microphone** | `android.permission.RECORD_AUDIO` | High-fidelity voice capture for dictation | 🟢 Standard |
+| **Notifications** | `android.permission.POST_NOTIFICATIONS` | Foreground service recording status controls | 🟢 Standard |
+| **Mic Service** | `android.permission.FOREGROUND_SERVICE_MICROPHONE` | Android 14+ recording stability | 🟢 Standard |
+| **Internet** | `android.permission.INTERNET` | Optional cloud API processing | 🟢 Standard |
 
-Read our complete [PERMISSIONS.md](docs/PERMISSIONS.md) documentation for privacy assurances.
-
----
-
-## 🎯 Dictation Modes
-
-Select the exact tone and structure you want:
-
-1. **Natural Flow (`flow_natural`)** - Standard conversational flow with hesitations removed and smart punctuation (Default).
-2. **Professional (`professional`)** - Formal phrasing, concise sentences, ideal for business emails and reports.
-3. **Bullet Points (`bullet_points`)** - Automatically organizes thoughts, steps, and lists into structured Markdown bullets (`- item`).
-4. **Raw Verbatim (`raw_verbatim`)** - Preserves every exact word including filler sounds, with basic punctuation.
+**Zero high-risk permissions requested:** No Accessibility Service, no Overlay window, no background battery exemptions.
 
 ---
 
@@ -127,30 +126,23 @@ Select the exact tone and structure you want:
 
 ### 📱 1. Android Application
 
-#### Prerequisites
-- Android Studio Ladybug / Meerkat or newer
-- JDK 17
-- Android SDK Platform 34 or 35
+#### Download Ready-to-Install APK
+Download the signed APK directly: **[`AmozVz-v1.0.2.apk`](https://github.com/amotixayush-dev/AmozVz/releases/download/v1.0.2/AmozVz-v1.0.2.apk)** (11 MB).
 
-#### Build & Run
+#### Build From Source
 ```bash
 cd android
 
-# Run unit tests
-./gradlew testDebugUnitTest
+# Run unit test suite
+gradle testDebugUnitTest
 
-# Assemble debug APK
-./gradlew assembleDebug
-
-# Output APK is located at:
-# android/app/build/outputs/apk/debug/app-debug.apk
+# Build signed release APK
+gradle assembleRelease
 ```
 
 ---
 
-### 💻 2. Standalone AI Agent Server & CLI
-
-AmozVz includes a Python FastAPI server and CLI tool that can be used on desktop or deployed as your self-hosted backend.
+### 💻 2. Python Backend & CLI
 
 #### Setup
 ```bash
@@ -160,13 +152,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-#### Run CLI Dictation / Cleaner
+#### Run CLI Dictation Cleaner
 ```bash
 # Clean raw speech text via CLI
-python3 cli.py "um, uh, hello everyone, wait make that good afternoon team, period"
+python3 cli.py "Let's meet at 4, wait, no, 5 PM"
 
-# Run with different modes
-python3 cli.py "buy apples. buy oranges. buy milk." --mode bullet_points
+# Run with context mode
+python3 cli.py "first buy milk. second buy eggs. third buy bread." --mode lists
 ```
 
 #### Run Unit Tests
@@ -174,32 +166,18 @@ python3 cli.py "buy apples. buy oranges. buy milk." --mode bullet_points
 PYTHONPATH=. python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-#### Run API Server
+#### Run FastAPI Server
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Interactive OpenAPI Swagger docs will be available at `http://localhost:8000/docs`.
-
-#### Docker Deployment
-```bash
-cd server
-docker-compose up -d
 ```
 
 ---
 
 ## 🧪 Verification & Test Suite
 
-AmozVz is thoroughly tested across both platforms:
-- **Android**: `HesitationFilterTest.kt` passes with 100% test coverage for vocal fillers, stutters, self-corrections, punctuation commands, and modes.
-- **Python Backend**: `test_agent.py` passes all unit tests validating deterministic regex filtering and AI provider integration.
-
----
-
-## 🤝 Contributing
-
-Contributions are warmly welcome! Please check out [CONTRIBUTING.md](CONTRIBUTING.md) and review our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+AmozVz includes comprehensive unit tests verifying all 6 rules:
+- **Android (`HesitationFilterTest.kt`)**: 7/7 unit tests passing on JVM.
+- **Python Server (`test_agent.py`)**: 7/7 unit tests passing with zero errors.
 
 ---
 

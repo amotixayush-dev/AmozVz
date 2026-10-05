@@ -18,7 +18,7 @@ def main():
     parser.add_argument(
         "--mode",
         choices=[m.value for m in DictationMode],
-        default=DictationMode.FLOW_NATURAL.value,
+        default=DictationMode.AUTO.value,
         help="Dictation polishing mode",
     )
     parser.add_argument("--no-hesitations", action="store_true", help="Do not strip hesitations/fillers")

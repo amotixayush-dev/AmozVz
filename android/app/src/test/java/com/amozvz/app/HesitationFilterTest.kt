@@ -8,31 +8,34 @@ import org.junit.Test
 class HesitationFilterTest {
 
     @Test
-    fun testHesitationRemoval() {
-        val raw = "Um, uh, hello team, ah, we are, you know, basically ready to begin."
-        val result = HesitationFilter.clean(raw, DictationMode.FLOW_NATURAL)
+    fun testRule1_RemoveAllFillerWords() {
+        val raw = "Um, uh, like, we should you know actually test this, I mean basically now."
+        val result = HesitationFilter.clean(raw)
 
         assertFalse(result.cleanedText.contains("um", ignoreCase = true))
         assertFalse(result.cleanedText.contains("uh", ignoreCase = true))
         assertFalse(result.cleanedText.contains("you know", ignoreCase = true))
+        assertFalse(result.cleanedText.contains("actually", ignoreCase = true))
+        assertFalse(result.cleanedText.contains("I mean", ignoreCase = true))
         assertFalse(result.cleanedText.contains("basically", ignoreCase = true))
-        assertTrue(result.cleanedText.startsWith("Hello team"))
-        assertTrue(result.cleanedText.contains("ready to begin"))
-        assertTrue(result.hesitationsRemovedCount > 0)
+        assertTrue(result.cleanedText.startsWith("We should test this"))
     }
 
     @Test
-    fun testStutterRepetitionRemoval() {
-        val raw = "I I think we we should test th-the feature."
-        val result = HesitationFilter.clean(raw, DictationMode.FLOW_NATURAL)
+    fun testRule2_ResolveSelfCorrectionsExample() {
+        // Exact example from user prompt: "Let's meet at 4, wait, no, 5 PM" -> "Let's meet at 5:00 PM"
+        val raw = "Let's meet at 4, wait, no, 5 PM"
+        val result = HesitationFilter.clean(raw)
 
-        assertEquals("I think we should test the feature.", result.cleanedText)
+        assertFalse(result.cleanedText.contains("4"))
+        assertTrue(result.cleanedText.contains("5:00 PM"))
+        assertEquals("Let's meet at 5:00 PM.", result.cleanedText)
     }
 
     @Test
-    fun testSelfCorrectionScratchThat() {
-        val raw = "Send the email to Sarah, scratch that, send it to Alex."
-        val result = HesitationFilter.clean(raw, DictationMode.FLOW_NATURAL)
+    fun testRule2_ScratchThatCorrection() {
+        val raw = "Send the document to Sarah, scratch that, send it to Alex."
+        val result = HesitationFilter.clean(raw)
 
         assertFalse(result.cleanedText.contains("Sarah"))
         assertTrue(result.cleanedText.contains("Alex"))
@@ -40,50 +43,44 @@ class HesitationFilterTest {
     }
 
     @Test
-    fun testSelfCorrectionWaitMakeThat() {
-        val raw = "Let's meet at 2:00 wait make that 3:30 PM tomorrow."
-        val result = HesitationFilter.clean(raw, DictationMode.FLOW_NATURAL)
+    fun testRule3_GrammarCapitalizationAndPunctuation() {
+        val raw = "hello everyone how are you today period i hope you are doing well"
+        val result = HesitationFilter.clean(raw)
 
-        assertFalse(result.cleanedText.contains("2:00"))
-        assertTrue(result.cleanedText.contains("3:30 PM"))
+        assertTrue(result.cleanedText.startsWith("Hello"))
+        assertTrue(result.cleanedText.contains("I hope"))
+        assertTrue(result.cleanedText.endsWith("."))
     }
 
     @Test
-    fun testSpokenPunctuationConversion() {
-        val raw = "Hello Alice comma how are you question mark I am doing great period"
-        val result = HesitationFilter.clean(raw, DictationMode.FLOW_NATURAL)
-
-        assertEquals("Hello Alice, how are you? I am doing great.", result.cleanedText)
-    }
-
-    @Test
-    fun testBulletPointsMode() {
-        val raw = "Buy groceries. Call mom. Finish homework."
-        val result = HesitationFilter.clean(raw, DictationMode.BULLET_POINTS)
+    fun testRule4_AutoStructureLists() {
+        val raw = "First buy milk. Second buy eggs. Third buy bread."
+        val result = HesitationFilter.clean(raw, mode = DictationMode.LISTS)
 
         val lines = result.cleanedText.lines()
-        assertTrue(lines.all { it.startsWith("- ") })
-        assertTrue(result.cleanedText.contains("Buy groceries"))
-        assertTrue(result.cleanedText.contains("Call mom"))
-        assertTrue(result.cleanedText.contains("Finish homework"))
+        assertTrue(lines.size >= 3)
+        assertTrue(result.cleanedText.contains("Buy milk"))
+        assertTrue(result.cleanedText.contains("Buy eggs"))
+        assertTrue(result.cleanedText.contains("Buy bread"))
     }
 
     @Test
-    fun testRawVerbatimKeepsFillers() {
-        val raw = "Um, this is uh verbatim."
-        val result = HesitationFilter.clean(raw, DictationMode.RAW_VERBATIM)
+    fun testRule5_CodeContextFormatting() {
+        val raw = "def calculate_total(items): return sum(items)"
+        val result = HesitationFilter.clean(raw, mode = DictationMode.CODE)
 
-        assertTrue(result.cleanedText.contains("Um"))
-        assertTrue(result.cleanedText.contains("uh"))
+        assertTrue(result.cleanedText.startsWith("```"))
+        assertTrue(result.cleanedText.endsWith("```"))
+        assertTrue(result.cleanedText.contains("def calculate_total"))
     }
 
     @Test
-    fun testCustomDictionary() {
-        val raw = "We deploy to k8s using amoz vz."
-        val dict = mapOf("k8s" to "Kubernetes", "amoz vz" to "AmozVz")
-        val result = HesitationFilter.clean(raw, customDictionary = dict)
+    fun testRule6_NoPreambleOrCommentary() {
+        val raw = "Um, this is a test transcription."
+        val result = HesitationFilter.clean(raw)
 
-        assertTrue(result.cleanedText.contains("Kubernetes"))
-        assertTrue(result.cleanedText.contains("AmozVz"))
+        assertFalse(result.cleanedText.contains("Here is"))
+        assertFalse(result.cleanedText.contains("Cleaned:"))
+        assertEquals("This is a test transcription.", result.cleanedText)
     }
 }
