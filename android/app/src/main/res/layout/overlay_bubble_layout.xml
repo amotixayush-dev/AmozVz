@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlay_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:animateLayoutChanges="true">
+
+    <!-- Floating Pill Container -->
+    <LinearLayout
+        android:id="@+id/overlay_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#DD1E1E2E"
+        android:paddingStart="8dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:elevation="8dp">
+
+        <!-- Animated Mic Action Button -->
+        <FrameLayout
+            android:id="@+id/btn_mic_container"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="#313244">
+
+            <ImageView
+                android:id="@+id/btn_mic"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:contentDescription="Dictate"
+                android:src="@android:drawable/ic_btn_speak_now" />
+        </FrameLayout>
+
+        <!-- Status / Transcription preview text -->
+        <TextView
+            android:id="@+id/txt_overlay_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="Tap to speak"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:maxLines="2"
+            android:maxWidth="220dp"
+            android:ellipsize="end" />
+
+        <!-- Quick Close / Dismiss Icon -->
+        <ImageView
+            android:id="@+id/btn_close_overlay"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:contentDescription="Dismiss"
+            android:src="@android:drawable/ic_menu_close_clear_cancel" />
+
+    </LinearLayout>
+
+</FrameLayout>

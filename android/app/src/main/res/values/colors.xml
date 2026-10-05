@@ -1,0 +1,13 @@
+<resources>
+    <color name="purple_primary">#6750A4</color>
+    <color name="purple_accent">#D0BCFF</color>
+    <color name="teal_primary">#006A6A</color>
+    <color name="teal_accent">#4DDAD9</color>
+    <color name="recording_red">#E53935</color>
+    <color name="processing_amber">#FFA000</color>
+    <color name="success_green">#43A047</color>
+    <color name="overlay_background">#E61E1E2E</color>
+    <color name="overlay_pill">#313244</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>

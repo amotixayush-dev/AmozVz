@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">AmozVz</string>
+    <string name="accessibility_service_label">AmozVz Dictation Injection</string>
+    <string name="accessibility_service_description">Enables AmozVz to detect active text fields and automatically insert your cleaned, polished voice dictation into any application.</string>
+    <string name="ime_label">AmozVz Voice Input</string>
+    <string name="notification_channel_name">AmozVz Dictation Service</string>
+    <string name="notification_channel_desc">Active recording and dictation status controls.</string>
+    <string name="notification_title">AmozVz Listening</string>
+    <string name="notification_content">Tap to stop or speak naturally anywhere...</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_cancel">Cancel</string>
+</resources>

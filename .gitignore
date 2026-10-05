@@ -1,0 +1,68 @@
+# Android / Gradle
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+build/
+*/build/
+captures/
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services
+google-services.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.env
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Audio scratch recordings
+*.wav
+*.mp3
+*.m4a
+*.pcm
+recordings/
+uploads/
+
+# IDE & OS
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+Thumbs.db
