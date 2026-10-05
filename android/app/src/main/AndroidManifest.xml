@@ -2,16 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Essential Dictation Permissions -->
+    <!-- Safe, Standard Dictation Permissions (No Sensitive Data Access) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".AmozVzApplication"
@@ -36,7 +34,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Permissions & Onboarding Setup Activity -->
+        <!-- Permissions & Privacy Setup Activity -->
         <activity
             android:name=".ui.PermissionsActivity"
             android:exported="false"
@@ -48,32 +46,13 @@
             android:exported="false"
             android:theme="@style/Theme.AmozVz" />
 
-        <!-- Floating Mic Overlay Service (Draw over other apps) -->
-        <service
-            android:name=".service.OverlayService"
-            android:exported="false" />
-
         <!-- Foreground Audio Recording Service (Microphone lock & Sticky notification) -->
         <service
             android:name=".service.DictationForegroundService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- Accessibility Service (Inject text directly into WhatsApp, Slack, Gmail, Notes, etc.) -->
-        <service
-            android:name=".service.AmozVzAccessibilityService"
-            android:exported="true"
-            android:label="@string/accessibility_service_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
-
-        <!-- Optional Voice Input Method / Keyboard Service -->
+        <!-- Standard Voice Input Method / Keyboard Service -->
         <service
             android:name=".service.AmozVzInputMethodService"
             android:exported="true"

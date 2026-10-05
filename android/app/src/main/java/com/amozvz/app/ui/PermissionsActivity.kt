@@ -10,12 +10,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.amozvz.app.ui.components.PermissionItemCard
+import com.amozvz.app.ui.theme.AccentTeal
 import com.amozvz.app.ui.theme.AmozVzTheme
 import com.amozvz.app.utils.PermissionHelper
 
@@ -26,9 +30,7 @@ class PermissionsActivity : ComponentActivity() {
 
         setContent {
             AmozVzTheme {
-                PermissionsScreen(
-                    onBackClick = { finish() }
-                )
+                PermissionsScreen(onBackClick = { finish() })
             }
         }
     }
@@ -40,10 +42,7 @@ fun PermissionsScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
 
     var hasMic by remember { mutableStateOf(PermissionHelper.hasRecordAudioPermission(context)) }
-    var hasOverlay by remember { mutableStateOf(PermissionHelper.hasOverlayPermission(context)) }
-    var hasAccessibility by remember { mutableStateOf(PermissionHelper.hasAccessibilityPermission(context)) }
     var hasNotification by remember { mutableStateOf(PermissionHelper.hasNotificationPermission(context)) }
-    var hasBattery by remember { mutableStateOf(PermissionHelper.isIgnoringBatteryOptimizations(context)) }
 
     val micLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -57,15 +56,10 @@ fun PermissionsScreen(onBackClick: () -> Unit) {
         hasNotification = granted
     }
 
-    // Refresh permissions state when returning to screen
-    DisposableEffect(Unit) {
-        onDispose { }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Permissions & Setup") },
+                title = { Text("Permissions & Privacy") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -82,22 +76,43 @@ fun PermissionsScreen(onBackClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "AmozVz requires these permissions to provide seamless voice-to-text dictation across all your apps like Wispr Flow.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = AccentTeal,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("100% Privacy Focused", style = MaterialTheme.typography.titleSmall, color = Color.White)
+                            Text(
+                                "No sensitive data access required. AmozVz does not access keystrokes, passwords, or personal files.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             item {
                 PermissionItemCard(
                     title = "Microphone Access",
-                    description = "Required to capture your voice dictation and recognize natural speech.",
+                    description = "Required only to capture your voice dictation when you tap the Speak button.",
                     isGranted = hasMic,
                     onGrantClick = {
                         micLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
@@ -107,46 +122,13 @@ fun PermissionsScreen(onBackClick: () -> Unit) {
 
             item {
                 PermissionItemCard(
-                    title = "Display Over Other Apps (Overlay)",
-                    description = "Enables the floating mic widget so you can dictate inside WhatsApp, Gmail, Slack, and notes.",
-                    isGranted = hasOverlay,
-                    onGrantClick = {
-                        context.startActivity(PermissionHelper.getOverlayPermissionIntent(context))
-                    }
-                )
-            }
-
-            item {
-                PermissionItemCard(
-                    title = "Accessibility Service",
-                    description = "Allows AmozVz to automatically type your cleaned, punctuated words directly into active input fields.",
-                    isGranted = hasAccessibility,
-                    onGrantClick = {
-                        context.startActivity(PermissionHelper.getAccessibilitySettingsIntent())
-                    }
-                )
-            }
-
-            item {
-                PermissionItemCard(
-                    title = "Notifications",
-                    description = "Shows recording status and quick stop controls in your notification shade.",
+                    title = "Notifications (Optional)",
+                    description = "Shows recording status and quick Stop controls while dictating.",
                     isGranted = hasNotification,
                     onGrantClick = {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                             notificationLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                         }
-                    }
-                )
-            }
-
-            item {
-                PermissionItemCard(
-                    title = "Battery Optimization Exemption",
-                    description = "Prevents Android from killing the floating widget when running in the background.",
-                    isGranted = hasBattery,
-                    onGrantClick = {
-                        context.startActivity(PermissionHelper.getBatteryOptimizationIntent(context))
                     }
                 )
             }

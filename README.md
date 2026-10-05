@@ -13,7 +13,7 @@
 
 <br/>
 
-[![Download APK](https://img.shields.io/badge/Download_APK-v1.0.0_Release-brightgreen?style=for-the-badge&logo=android)](https://github.com/amotixayush-dev/AmozVz/releases/latest)
+[![Download APK](https://img.shields.io/badge/Download_APK-v1.0.1_Release-brightgreen?style=for-the-badge&logo=android)](https://github.com/amotixayush-dev/AmozVz/releases/latest)
 
 </div>
 

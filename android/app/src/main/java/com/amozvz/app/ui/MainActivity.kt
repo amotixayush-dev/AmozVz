@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.amozvz.app.AmozVzApplication
 import com.amozvz.app.data.models.TranscriptionResult
 import com.amozvz.app.engine.OnDeviceSpeechRecognizer
-import com.amozvz.app.service.OverlayService
 import com.amozvz.app.ui.components.DictationModeSelector
 import com.amozvz.app.ui.components.WaveformVisualizer
 import com.amozvz.app.ui.theme.*
@@ -63,12 +62,10 @@ fun MainDashboardScreen(
     val engine = remember { app.engine }
     val scope = rememberCoroutineScope()
 
-    var isOverlayActive by remember { mutableStateOf(prefs.isOverlayEnabled && PermissionHelper.hasOverlayPermission(context)) }
     var selectedMode by remember { mutableStateOf(prefs.dictationMode) }
     var isListening by remember { mutableStateOf(false) }
     var isPolishing by remember { mutableStateOf(false) }
     var lastResult by remember { mutableStateOf<TranscriptionResult?>(null) }
-    var liveSpeechText by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf("Ready to dictate") }
 
     val speechRecognizer = remember {
@@ -81,7 +78,8 @@ fun MainDashboardScreen(
                     val result = engine.processSpeechText(raw)
                     lastResult = result
                     isPolishing = false
-                    statusMessage = "Dictation polished and ready!"
+                    statusMessage = "Dictation polished & copied to clipboard! 📋"
+                    ClipboardHelper.copyToClipboard(context, result.cleanedText, showToast = true)
                 }
             }
             onError = { error ->
@@ -92,10 +90,8 @@ fun MainDashboardScreen(
         }
     }
 
-    val allPermissionsGranted = remember(context) {
-        PermissionHelper.hasRecordAudioPermission(context) &&
-                PermissionHelper.hasOverlayPermission(context) &&
-                PermissionHelper.hasAccessibilityPermission(context)
+    val hasMicPermission = remember(context) {
+        PermissionHelper.hasRecordAudioPermission(context)
     }
 
     Scaffold(
@@ -107,7 +103,7 @@ fun MainDashboardScreen(
                             modifier = Modifier
                                 .size(10.dp)
                                 .clip(CircleShape)
-                                .background(if (isOverlayActive) GreenSuccess else Color.Gray)
+                                .background(GreenSuccess)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("AmozVz Flow")
@@ -134,76 +130,36 @@ fun MainDashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Permissions Banner (if missing any permission)
-            if (!allPermissionsGranted) {
+            // Safe Permission Banner (if missing microphone permission)
+            if (!hasMicPermission) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF332025))
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Default.Warning,
+                                Icons.Default.Mic,
                                 contentDescription = null,
-                                tint = Color(0xFFFF5252),
+                                tint = AccentPurple,
                                 modifier = Modifier.size(28.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Permissions Required", style = MaterialTheme.typography.titleSmall, color = Color.White)
-                                Text("Overlay & Accessibility are required for floating mic & auto-typing.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFCDD2))
+                                Text("Microphone Access Needed", style = MaterialTheme.typography.titleSmall)
+                                Text("Only needed to capture voice for dictation.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                             }
                             Button(
                                 onClick = onOpenPermissions,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentPurple)
                             ) {
-                                Text("Setup")
+                                Text("Grant")
                             }
                         }
-                    }
-                }
-            }
-
-            // Floating Overlay Toggle Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Floating Mic Overlay", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Draws a floating button over WhatsApp, Slack, Notes, etc. like Wispr Flow.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                        Switch(
-                            checked = isOverlayActive,
-                            onCheckedChange = { enable ->
-                                if (enable && !PermissionHelper.hasOverlayPermission(context)) {
-                                    onOpenPermissions()
-                                } else {
-                                    isOverlayActive = enable
-                                    prefs.isOverlayEnabled = enable
-                                    if (enable) {
-                                        OverlayService.start(context)
-                                    } else {
-                                        OverlayService.stop(context)
-                                    }
-                                }
-                            }
-                        )
                     }
                 }
             }
@@ -232,9 +188,9 @@ fun MainDashboardScreen(
                         modifier = Modifier.padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Live Speech Tester", style = MaterialTheme.typography.titleMedium)
+                        Text("Voice Dictation Pad", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Try saying: 'Let's meet at 2 wait make that 3:30 PM tomorrow period'",
+                            "Speak naturally. Hesitations and self-corrections are cleaned automatically.",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -287,7 +243,7 @@ fun MainDashboardScreen(
                 }
             }
 
-            // Results Card
+            // Results Card with Auto-Copy and Quick Share
             item {
                 AnimatedVisibility(visible = lastResult != null) {
                     lastResult?.let { result ->
@@ -303,10 +259,17 @@ fun MainDashboardScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text("AmozVz Polished Text", style = MaterialTheme.typography.titleMedium)
-                                    IconButton(onClick = {
-                                        ClipboardHelper.copyToClipboard(context, result.cleanedText)
-                                    }) {
-                                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+                                    Row {
+                                        IconButton(onClick = {
+                                            ClipboardHelper.copyToClipboard(context, result.cleanedText)
+                                        }) {
+                                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+                                        }
+                                        IconButton(onClick = {
+                                            PermissionHelper.shareText(context, result.cleanedText)
+                                        }) {
+                                            Icon(Icons.Default.Share, contentDescription = "Share")
+                                        }
                                     }
                                 }
 
